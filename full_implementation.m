@@ -482,10 +482,10 @@ function result = mean_absolute_error(X, Y)
 end
 
 function F = matrix_F(u, v)
-% MATRIX_F_OPTIMIZED Computes the F matrix used in the Characteristic
+% Computes the F matrix used in the Characteristic
 % Multivector (CM) method.
 %
-%   F = matrix_F_optimized(u, v)
+%   F = matrix_F(u, v)
 %
 %   Input:
 %     u, v - 3xN matrices representing two point clouds.
@@ -622,10 +622,10 @@ function F = matrix_F(u, v)
 end
 
 function G = matrix_G(v)
-% MATRIX_G_OPTIMIZED Computes the G matrix used in the Characteristic
+% Computes the G matrix used in the Characteristic
 % Multivector (CM) method using explicit loops.
 %
-%   G = matrix_G_optimized(v)
+%   G = matrix_G(v)
 %
 %   Input:
 %     v - A 3xN matrix representing a point cloud.
