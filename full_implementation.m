@@ -482,220 +482,100 @@ function result = mean_absolute_error(X, Y)
 end
 
 function F = matrix_F(u, v)
-% Computes the F matrix used in the Characteristic
-% Multivector (CM) method.
-%
-%   F = matrix_F(u, v)
-%
-%   Input:
-%     u, v - 3xN matrices representing two point clouds.
-%
-%   Output:
-%     F - A 3x3 matrix whose (j,k) entry equals the sum over i=1:N of the
-%         product of the scalar components (obtained via the Clifford product)
-%         corresponding to e_j (from u) and e_k (from v).
-%
-
-    %% Checking size of data
-    [rows_u, ~] = size(u);
-    [rows_v, ~] = size(v);
-    if rows_u ~= 3
-        u = u';
-    end
-    if rows_v ~= 3
-        v = v';
-    end
-
-    %% Convert to double
+    % MATRIX_F Computes the 3x3 cross covariance matrix in 3D using Clifford Algebra.
+    %
+    %   F = matrix_F(u, v)
+    %
+    %   Inputs:
+    %     u, v - 3xN matrices representing two point clouds.
+    %
+    %   Output:
+    %     F - A 3x3 matrix where each entry F(i,j) is computed as:
+    %         F(i,j) = sum( scalar_product(u_m, E(i)) .* scalar_product(v_m, E(j)) )
+    %
+    %   Note: This implementation assumes that the Clifford basis vectors
+    %         e1, e2, e3 have already been defined by the GA toolbox.
+    
+    % Ensure u and v are 3xN (transpose if necessary)
+    if size(u, 1) ~= 3, u = u'; end
+    if size(v, 1) ~= 3, v = v'; end
+    
+    % Convert to double for consistency
     u = double(u);
     v = double(v);
-
-    %% Subtract the mean from each point set as this is what GA method does
+    
+    % Optionally center the data (remove translation effects)
     u = u - mean(u, 2);
     v = v - mean(v, 2);
-
-    %% Vector containing e1,e2,e3
-    vec = [e1, e2, e3];
-
-    %% Multiplication of u and v (COLUMN) - Convert them to Clifford multivectors
-    % This multiplication uses the toolbox operator such that vec * u produces
-    % a 1xN vector of Clifford multivectors.
-    clif_u = vec * u;
-    clif_v = vec * v;
-
-    %% Forming Matrix F --> F_{jk} = sum_{i=1}^{N} (u_i . e_j)(v_i . e_k)
-    %% 1st Column calculations
-    F11a = bsxfun(@scalar_product, clif_u(1,:), e1);
-    F11a_coef = cell2mat(coefficients(F11a));
-    F11b = bsxfun(@scalar_product, clif_v(1,:), e1);
-    F11b_coef = cell2mat(coefficients(F11b));
-    if isempty(F11a_coef) || isempty(F11b_coef)
-        F11 = 0;
-    else 
-        F11 = sum(F11a_coef .* F11b_coef);
+    
+    % Convert numeric points into multivectors.
+    % Each point is mapped to a multivector: u_m = e1*u(1,:) + e2*u(2,:) + e3*u(3,:)
+    u_m = e1 * u(1,:) + e2 * u(2,:) + e3 * u(3,:);
+    v_m = e1 * v(1,:) + e2 * v(2,:) + e3 * v(3,:);
+    
+    % Define the Clifford basis for 3D
+    E = [e1, e2, e3];
+    
+    % Preallocate the 3x3 matrix F.
+    F = zeros(3, 3);
+    
+    % Compute F matrix elements in a similar manner as in your 4D code.
+    for i = 1:3
+        for j = 1:3
+            % Compute the scalar projections along E(i) and E(j) for all points,
+            % then sum over all points.
+            F(i, j) = sum( scalar_product(u_m, E(i)) .* scalar_product(v_m, E(j)) );
+        end
     end
-
-    F21a = bsxfun(@scalar_product, clif_u(1,:), e2);
-    F21a_coef = cell2mat(coefficients(F21a));
-    F21b = bsxfun(@scalar_product, clif_v(1,:), e1);
-    F21b_coef = cell2mat(coefficients(F21b));
-    if isempty(F21a_coef) || isempty(F21b_coef)
-        F21 = 0;
-    else 
-        F21 = sum(F21a_coef .* F21b_coef);
-    end
-
-    F31a = bsxfun(@scalar_product, clif_u(1,:), e3);
-    F31a_coef = cell2mat(coefficients(F31a));
-    F31b = bsxfun(@scalar_product, clif_v(1,:), e1);
-    F31b_coef = cell2mat(coefficients(F31b));
-    if isempty(F31a_coef) || isempty(F31b_coef)
-        F31 = 0;
-    else 
-        F31 = sum(F31a_coef .* F31b_coef);
-    end
-
-    %% 2nd Column calculations
-    F12a = bsxfun(@scalar_product, clif_u(1,:), e1);
-    F12a_coef = cell2mat(coefficients(F12a));
-    F12b = bsxfun(@scalar_product, clif_v(1,:), e2);
-    F12b_coef = cell2mat(coefficients(F12b));
-    if isempty(F12a_coef) || isempty(F12b_coef)
-        F12 = 0;
-    else 
-        F12 = sum(F12a_coef .* F12b_coef);
-    end
-
-    F22a = bsxfun(@scalar_product, clif_u(1,:), e2);
-    F22a_coef = cell2mat(coefficients(F22a));
-    F22b = bsxfun(@scalar_product, clif_v(1,:), e2);
-    F22b_coef = cell2mat(coefficients(F22b));
-    if isempty(F22a_coef) || isempty(F22b_coef)
-        F22 = 0;
-    else 
-        F22 = sum(F22a_coef .* F22b_coef);
-    end
-
-    F32a = bsxfun(@scalar_product, clif_u(1,:), e3);
-    F32a_coef = cell2mat(coefficients(F32a));
-    F32b = bsxfun(@scalar_product, clif_v(1,:), e2);
-    F32b_coef = cell2mat(coefficients(F32b));
-    if isempty(F32a_coef) || isempty(F32b_coef)
-        F32 = 0;
-    else 
-        F32 = sum(F32a_coef .* F32b_coef);
-    end
-
-    %% 3rd Column calculations
-    F13a = bsxfun(@scalar_product, clif_u(1,:), e1);
-    F13a_coef = cell2mat(coefficients(F13a));
-    F13b = bsxfun(@scalar_product, clif_v(1,:), e3);
-    F13b_coef = cell2mat(coefficients(F13b));
-    if isempty(F13a_coef) || isempty(F13b_coef)
-        F13 = 0;
-    else 
-        F13 = sum(F13a_coef .* F13b_coef);
-    end
-
-    F23a = bsxfun(@scalar_product, clif_u(1,:), e2);
-    F23a_coef = cell2mat(coefficients(F23a));
-    F23b = bsxfun(@scalar_product, clif_v(1,:), e3);
-    F23b_coef = cell2mat(coefficients(F23b));
-    if isempty(F23a_coef) || isempty(F23b_coef)
-        F23 = 0;
-    else 
-        F23 = sum(F23a_coef .* F23b_coef);
-    end
-
-    F33a = bsxfun(@scalar_product, clif_u(1,:), e3);
-    F33a_coef = cell2mat(coefficients(F33a));
-    F33b = bsxfun(@scalar_product, clif_v(1,:), e3);
-    F33b_coef = cell2mat(coefficients(F33b));
-    if isempty(F33a_coef) || isempty(F33b_coef)
-        F33 = 0;
-    else 
-        F33 = sum(F33a_coef .* F33b_coef);
-    end
-
-    % Assemble the F matrix by columns
-    F = [F11, F12, F13; F21, F22, F23; F31, F32, F33];
 end
 
 function G = matrix_G(v)
-% Computes the G matrix used in the Characteristic
-% Multivector (CM) method using explicit loops.
-%
-%   G = matrix_G(v)
-%
-%   Input:
-%     v - A 3xN matrix representing a point cloud.
-%
-%   Output:
-%     G - A 3x3 matrix where each entry is computed as:
-%         G_{jk} = sum_{i=1}^{N} (v_i . e_j)(v_i . e_k)
-%
-
-    %% Checking size of data
-    [rows_v, ~] = size(v);
-    if rows_v ~= 3
+    % MATRIX_G Computes the G matrix for the CM method in 3D using Clifford Algebra.
+    %
+    %   G = matrix_G(v)
+    %
+    %   Input:
+    %     v - A 3xN matrix representing a point cloud.
+    %
+    %   Output:
+    %     G - A 3x3 matrix where each entry is computed as:
+    %         G_{jk} = sum_{i=1}^{N} (v_i . e_j)(v_i . e_k)
+    %
+    %   This implementation converts the point cloud into a multivector representation,
+    %   precomputes the scalar products with each basis vector, and then uses a matrix 
+    %   multiplication to assemble G.
+    
+    % Ensure v is 3xN
+    if size(v,1) ~= 3
         v = v';
     end
-
-    %% Convert to double precision
+    
+    % Convert to double precision
     v = double(v);
-
-    %% Subtract the mean from v (as in the GA method)
+    
+    % Subtract the mean (centering the data)
     v = v - mean(v, 2);
-
-    %% Vector containing e1,e2,e3
-    vec = [e1, e2, e3];
-
-    %% Multiply v by the basis to convert it to a Clifford multivector
-    clif_v = vec * v;
-
-    %% Forming Matrix G --> G_{jk} = sum_{i=1}^{N} (v_i . e_j)(v_i . e_k)
-    % 1st Column calculations
-    G11a = bsxfun(@scalar_product, clif_v(1,:), e1);
-    G11b = bsxfun(@scalar_product, clif_v(1,:), e1);
-    G11 = sum(G11a .* G11b);
-
-    G21a = bsxfun(@scalar_product, clif_v(1,:), e2);
-    G21b = bsxfun(@scalar_product, clif_v(1,:), e1);
-    G21 = sum(G21a .* G21b);
-
-    G31a = bsxfun(@scalar_product, clif_v(1,:), e3);
-    G31b = bsxfun(@scalar_product, clif_v(1,:), e1);
-    G31 = sum(G31a .* G31b);
-
-    %% 2nd Column calculations
-    G12a = bsxfun(@scalar_product, clif_v(1,:), e1);
-    G12b = bsxfun(@scalar_product, clif_v(1,:), e2);
-    G12 = sum(G12a .* G12b);
-
-    G22a = bsxfun(@scalar_product, clif_v(1,:), e2);
-    G22b = bsxfun(@scalar_product, clif_v(1,:), e2);
-    G22 = sum(G22a .* G22b);
-
-    G32a = bsxfun(@scalar_product, clif_v(1,:), e3);
-    G32b = bsxfun(@scalar_product, clif_v(1,:), e2);
-    G32 = sum(G32a .* G32b);
-
-    %% 3rd Column calculations
-    G13a = bsxfun(@scalar_product, clif_v(1,:), e1);
-    G13b = bsxfun(@scalar_product, clif_v(1,:), e3);
-    G13 = sum(G13a .* G13b);
-
-    G23a = bsxfun(@scalar_product, clif_v(1,:), e2);
-    G23b = bsxfun(@scalar_product, clif_v(1,:), e3);
-    G23 = sum(G23a .* G23b);
-
-    G33a = bsxfun(@scalar_product, clif_v(1,:), e3);
-    G33b = bsxfun(@scalar_product, clif_v(1,:), e3);
-    G33 = sum(G33a .* G33b);
-
-    % Assemble the G matrix by columns and convert the result to a numeric array
-    G = coefficients([G11, G12, G13; G21, G22, G23; G31, G32, G33]);
-    G = cell2mat(G);
+    
+    % Convert each point into its Clifford multivector representation.
+    % Each point is mapped as: v_m = e1*v(1,:) + e2*v(2,:) + e3*v(3,:)
+    v_m = e1 * v(1,:) + e2 * v(2,:) + e3 * v(3,:);
+    
+    % Define the basis vectors for 3D
+    E = [e1, e2, e3];
+    
+    % Determine the number of points
+    N = size(v, 2);
+    
+    % Precompute the scalar projections for each basis vector.
+    % A(i,k) = scalar_product(v_m(k), E(i)) for i = 1:3 and k = 1:N.
+    A = zeros(3, N);
+    for i = 1:3
+        A(i, :) = scalar_product(v_m, E(i));
+    end
+    
+    % Now, G_{jk} = sum_{i=1}^{N} A(j,i) * A(k,i)
+    % That is, G = A * A'
+    G = A * A';
 end
 
 function [New_Rotor, New_Rotor_Reverse, Rnew] = CM_FG_matrices(F_matrix, G_matrix)
